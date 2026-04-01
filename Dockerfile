@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
+
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install SSH server and essential tools
 RUN apt-get update && apt-get install -y \
     openssh-server \
     curl \
@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     nano \
     htop \
     sudo \
+    dos2unix \
     net-tools \
     iputils-ping \
     unzip \
@@ -22,28 +23,17 @@ RUN apt-get update && apt-get install -y \
     npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-    
-    # Create SSH run directory
+
 RUN mkdir /var/run/sshd
 
-# Create a non-root user 'vps' with sudo access
 RUN useradd -m -s /bin/bash vps && \
     echo "vps ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-# Configure SSH:
-# - Allow password authentication
-# - Allow root login (optional, uses 'vps' user instead)
-# - Keep alive settings
-RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config && \
-    echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config && \
-    echo "ClientAliveCountMax 10" >> /etc/ssh/sshd_config
-# Copy startup script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
 
-# Railway uses dynamic ports via $PORT env var
-# SSH will run on $PORT (default 22 locally)
+COPY start.sh /start.sh
+
+# Fix line endings and permissions
+RUN dos2unix /start.sh && chmod +x /start.sh
+
 EXPOSE 22
 
-CMD ["/start.sh"]
+CMD ["/bin/bash", "/start.sh"]
